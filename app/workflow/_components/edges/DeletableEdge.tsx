@@ -27,7 +27,7 @@ export default function DeletableEdge(props: EdgeProps) {
                     onClick={() => {
                         setEdges((edges) => edges.filter((edge) => edge.id !== props.id))   
                     }}
-                    />
+                    >x</Button>
                 </div>
             </EdgeLabelRenderer>
         </>

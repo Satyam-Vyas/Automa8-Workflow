@@ -1,7 +1,7 @@
 "use client"
 
 import { Workflow } from '@prisma/client'
-import { addEdge, Background, BackgroundVariant, Connection, Controls, Edge, ReactFlow, useEdgesState, useNodesState, useReactFlow } from '@xyflow/react'
+import { addEdge, Background, BackgroundVariant, Connection, Controls, Edge, getOutgoers, ReactFlow, useEdgesState, useNodesState, useReactFlow } from '@xyflow/react'
 import React, { useCallback, useEffect } from 'react'
 import "@xyflow/react/dist/style.css";
 import NodeComponent from './nodes/nodeComponent';
@@ -9,6 +9,7 @@ import { AppNode } from '@/types/appNode';
 import { CreateFlowNode } from '@/lib/workflow/createFlowNode';
 import { TaskType } from '@/types/task';
 import DeletableEdge from './edges/DeletableEdge';
+import { TaskRegistry } from '@/lib/workflow/task/registry';
  
 const nodeTypes = {
     FSNode: NodeComponent,
@@ -25,7 +26,6 @@ function FlowEditor({workflow}: {workflow: Workflow}) {
     const [nodes, setNodes, onNodesChange] = useNodesState<AppNode>([]);
     const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>([]);
     const { setViewport, screenToFlowPosition, updateNodeData } = useReactFlow();
-    console.log(nodes);
     useEffect(() => {
         try {
             const flow = JSON.parse(workflow.definition);
@@ -55,7 +55,7 @@ function FlowEditor({workflow}: {workflow: Workflow}) {
 
         const newNode = CreateFlowNode(taskType as TaskType, position);
         setNodes((nds) => nds.concat(newNode));
-    }, []);
+    }, [screenToFlowPosition, setNodes]);
 
     const onConnect = useCallback((connection: Connection) => {
         setEdges((eds) => addEdge({...connection, animated: true}, eds));
@@ -71,9 +71,52 @@ function FlowEditor({workflow}: {workflow: Workflow}) {
                 [connection.targetHandle]: "",
             },
         });
-        console.log("updated: ", node.id);
-    }, [setEdges, updateNodeData]);
-    
+    }, [setEdges, updateNodeData, nodes]);
+
+    const isValidConnection = useCallback((connection: Edge | Connection) => {
+
+        // preventing self loops
+        if(connection.source === connection.target) {
+            return false;
+        }
+
+        // ensuring Same taskParam type connection
+        const source = nodes.find((node) => node.id === connection.source);
+        const target = nodes.find((node) => node.id === connection.target);
+        if(!source || !target) {
+            return false;
+        }
+
+        const sourceTask = TaskRegistry[source.data.type];
+        const targetTask = TaskRegistry[target.data.type];
+
+        const output = sourceTask.outputs.find(
+            (o) => o.name === connection.sourceHandle
+        );
+
+        const input = targetTask.inputs.find(
+            (i) => i.name === connection.targetHandle
+        );
+
+        if(input?.type !== output?.type) {
+            return false;
+        }
+
+        // cycle detection before adding an edge
+        const hasCycle = (node: AppNode, visited = new Set()) => {
+            if (visited.has(node.id)) return false;
+            visited.add(node.id);
+     
+            for (const outgoer of getOutgoers(node, nodes, edges)) {
+              if (outgoer.id === connection.source) return true;
+              if (hasCycle(outgoer, visited)) return true;
+            }
+        };
+
+        const detectedCycle = hasCycle(target);
+        return !detectedCycle;
+    }, [nodes, edges]);
+
   return (
     <main className="h-full w-full">
         <ReactFlow 
@@ -89,7 +132,8 @@ function FlowEditor({workflow}: {workflow: Workflow}) {
         fitView
         onDragOver={onDragOver}
         onDrop={onDrop}
-        onConnect={onConnect}>
+        onConnect={onConnect}
+        isValidConnection={isValidConnection}>
             <Controls position="top-left" 
             fitViewOptions={fitViewOptions}/>
             <Background variant={BackgroundVariant.Dots} gap={12} size={1} /> 
