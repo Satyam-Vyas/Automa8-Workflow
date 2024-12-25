@@ -24,11 +24,6 @@ const routes = [
         label: "Credentials", 
         icon: ShieldCheckIcon,
     },
-    {
-        href: "billing",
-        label: "Billing", 
-        icon: CoinsIcon,
-    },
 ];
 
 export default function DesktopSideBar() {
@@ -43,10 +38,9 @@ export default function DesktopSideBar() {
     <div className="flex items-center justify-center gap-2 border-b-[1px] border-separate p-4">
         <Logo />
     </div>
-    <div className="p-2"> TODO CREDITS</div>
     <div className='flex flex-col p-2'>
         {routes.map(route => (
-            <Link key={route.href} href={route.href}
+            <Link key={route.href} href={route.href === "" ? "/" : route.href}
             className={buttonVariants({
                 variant: activeRoute.href === route.href
                 ? "sidebarActiveItem"
