@@ -19,7 +19,7 @@ export default function Logo({fontSize = "text-2x1",
         </div>
         <div>
             <span className='bg-gradient-to-r from-emerald-500 to-emerald-600
-        bg-clip-text text-transparent'>Scrape</span>
+        bg-clip-text text-transparent'>Automate</span>
         <span className="text-stone-700 dark:text-stone-300">Flow</span>
         </div>
     </Link>

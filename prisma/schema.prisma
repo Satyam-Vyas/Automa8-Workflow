@@ -79,3 +79,15 @@ model ExecutionLog {
   executionPhaseId String
   executionPhase   ExecutionPhase @relation(fields: [executionPhaseId], references: [id], onDelete: Cascade)
 }
+
+model Credential {
+  id         String  @id @default(cuid())
+  userId      String
+  name        String
+  value       String
+
+  createdAt   DateTime @default(now())
+  
+  //user cannot create two credentials with the same name
+  @@unique([name, userId])
+}
